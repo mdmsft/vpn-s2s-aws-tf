@@ -1,2 +1,1 @@
-tenant_id       = "op://Microsoft/Azure/Tenant"
-subscription_id = "op://Microsoft/Azure/Subscription"
+public_key_path = "~/.ssh/id_rsa.pub"
