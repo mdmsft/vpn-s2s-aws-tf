@@ -61,3 +61,47 @@ resource "azurerm_linux_virtual_machine" "main" {
     version   = local.workload_image_reference.3
   }
 }
+
+data "aws_ami" "ubuntu" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  owners = ["099720109477"]
+}
+
+resource "aws_security_group" "main" {
+  vpc_id = aws_vpc.main.id
+  name   = local.global_resource_suffix
+
+  ingress {
+    cidr_blocks = azurerm_subnet.workload.address_prefixes
+    protocol    = "TCP"
+    from_port   = 0
+    to_port     = 22
+  }
+
+  tags = {
+    Name = local.global_resource_suffix
+  }
+}
+
+resource "aws_instance" "main" {
+  ami           = data.aws_ami.ubuntu.id
+  instance_type = "t2.micro"
+  subnet_id     = aws_subnet.main.id
+
+  security_groups = [aws_security_group.main.id]
+
+  tags = {
+    Name = local.global_resource_suffix
+  }
+}

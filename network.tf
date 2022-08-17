@@ -1,6 +1,8 @@
 resource "azurerm_virtual_network" "hub" {
-  name                = "vnet-${local.resource_suffix}-hub"
-  address_space       = [var.virtual_network_address_space.hub]
+  name = "vnet-${local.resource_suffix}-hub"
+  address_space = [
+    var.virtual_network_address_space.hub
+  ]
   resource_group_name = azurerm_resource_group.main.name
   location            = azurerm_resource_group.main.location
 }
@@ -31,6 +33,10 @@ resource "azurerm_virtual_network_peering" "spoke" {
   allow_virtual_network_access = true
   allow_gateway_transit        = true
   use_remote_gateways          = true
+
+  depends_on = [
+    azurerm_virtual_network_gateway.main
+  ]
 }
 
 resource "azurerm_subnet" "gateway" {
@@ -205,81 +211,18 @@ resource "azurerm_public_ip_prefix" "main" {
 }
 
 resource "aws_vpc" "main" {
-  cidr_block = var.aws_vpc_cidr_block
+  cidr_block = var.vpc_cidr_block
+
+  tags = {
+    Name = local.global_resource_suffix
+  }
 }
 
 resource "aws_subnet" "main" {
   vpc_id     = aws_vpc.main.id
-  cidr_block = cidrsubnet(var.aws_vpc_cidr_block, 0, 0)
-}
+  cidr_block = cidrsubnet(var.vpc_cidr_block, 0, 0)
 
-resource "aws_customer_gateway" "main" {
-  ip_address = azurerm_public_ip.gateway.ip_address
-  type       = "ipsec.1"
-  bgp_asn    = 65000
-}
-
-resource "aws_vpn_gateway" "main" {
-  vpc_id = aws_vpc.main.id
-}
-
-resource "aws_vpn_connection" "main" {
-  customer_gateway_id     = aws_customer_gateway.main.id
-  vpn_gateway_id          = aws_vpn_gateway.main.id
-  static_routes_only      = true
-  local_ipv4_network_cidr = azurerm_subnet.workload.address_prefixes.0
-  type                    = "ipsec.1"
-}
-
-resource "aws_vpn_gateway_attachment" "main" {
-  vpc_id         = aws_vpc.main.id
-  vpn_gateway_id = aws_vpn_gateway.main.id
-}
-
-resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
-}
-
-resource "aws_route_table" "main" {
-  vpc_id = aws_vpc.main.id
-
-  route {
-    cidr_block = azurerm_virtual_network.spoke.address_space.0
-    gateway_id = aws_vpn_gateway.main.id
-  }
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main.id
-  }
-}
-
-data "aws_ami" "ubuntu" {
-  most_recent = true
-
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-
-  owners = ["099720109477"]
-}
-
-resource "aws_network_interface" "main" {
-  subnet_id = aws_subnet.main.id
-}
-
-resource "aws_instance" "main" {
-  ami           = data.aws_ami.ubuntu.id
-  instance_type = "t2.micro"
-
-  network_interface {
-    network_interface_id = aws_network_interface.main.id
-    device_index         = 0
+  tags = {
+    Name = local.global_resource_suffix
   }
 }

@@ -92,7 +92,17 @@ variable "local_network_address_space" {
   default = "192.168.255.0/24"
 }
 
-variable "aws_vpc_cidr_block" {
+variable "vpc_cidr_block" {
   type    = string
   default = "10.100.255.0/24"
+}
+
+variable "access_key" {
+  type      = string
+  sensitive = true
+}
+
+variable "secret_key" {
+  type      = string
+  sensitive = true
 }
